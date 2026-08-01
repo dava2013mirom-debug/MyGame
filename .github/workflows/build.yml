@@ -26,19 +26,22 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.36
 
-      - name: Setup Android SDK & Accept Licenses (ФИКС ОШИБКИ AIDL)
+      - name: Setup Android SDK & Symlinks (ФИНАЛЬНЫЙ ФИКС)
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
-          # Принудительно соглашаемся со всеми лицензиями Android
-          yes | sdkmanager --licenses > /dev/null || true
-          # Скачиваем именно тот build-tool, в котором лежит Aidl
-          sdkmanager "platform-tools" "build-tools;33.0.0" "platforms;android-31"
+          # 1. Создаем папку tools/bin, где Buildozer будет искать утилиты
+          mkdir -p $ANDROID_HOME/tools/bin
+          # 2. Создаем ярлыки (симлинки) на sdkmanager и avdmanager
+          ln -s $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
+          ln -s $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager $ANDROID_HOME/tools/bin/avdmanager
+          # 3. Соглашаемся со всеми лицензиями
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          # 4. Скачиваем build-tools (где лежит Aidl)
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "build-tools;33.0.0" "platforms;android-33"
 
       - name: Build with Buildozer
-        run: |
-          buildozer -v android debug
-          if [ ! -f bin/*.apk ]; then buildozer -v android debug; fi
+        run: buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
